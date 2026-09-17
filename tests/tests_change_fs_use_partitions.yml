@@ -7,15 +7,18 @@
     storage_use_partitions: true
     mount_location: '/opt/test1'
     volume_size: '5g'
-    fs_type_after: "{{ 'ext3'
-      if (ansible_facts['distribution'] == 'RedHat' and
-          ansible_facts['distribution_major_version'] == '6')
-      else 'ext4' }}"
     __storage_min_size: "{{ volume_size }}"
     __storage_max_return: 1
   tags:
     - tests::lvm
   tasks:
+    - name: Set fs_type_after based on distribution and version
+      ansible.builtin.set_fact:
+        __storage_fs_type_after: "{{ 'ext3'
+          if (ansible_facts['distribution'] == 'RedHat' and
+          ansible_facts['distribution_major_version'] == '6')
+          else 'ext4' }}"
+
     - name: Prep storage role and discover unused disks
       ansible.builtin.include_tasks: tasks/setup.yml
 
@@ -33,7 +36,7 @@
     - name: Verify role results
       include_tasks: verify-role-results.yml
 
-    - name: Change the LVM partition file system type to {{ fs_type_after }}
+    - name: Change the LVM partition file system type to {{ __storage_fs_type_after }}
       include_tasks: tasks/run_role_with_clear_facts.yml
       vars:
         storage_pools:
@@ -42,7 +45,7 @@
             volumes:
               - name: test1
                 size: "{{ volume_size }}"
-                fs_type: "{{ fs_type_after }}"
+                fs_type: "{{ __storage_fs_type_after }}"
                 mount_point: "{{ mount_location }}"
 
     - name: Verify role results - 2
@@ -57,7 +60,7 @@
             volumes:
               - name: test1
                 size: "{{ volume_size }}"
-                fs_type: "{{ fs_type_after }}"
+                fs_type: "{{ __storage_fs_type_after }}"
                 mount_point: "{{ mount_location }}"
 
     - name: Verify role results - 3
@@ -73,7 +76,7 @@
             volumes:
               - name: test1
                 size: "{{ volume_size }}"
-                fs_type: "{{ fs_type_after }}"
+                fs_type: "{{ __storage_fs_type_after }}"
                 mount_point: "{{ mount_location }}"
                 state: absent
 
