@@ -6,15 +6,18 @@
     storage_safe_mode: false
     mount_location: '/opt/test1'
     volume_size: '5g'
-    fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
-                   ansible_facts['distribution_major_version'] == '6') |
-                  ternary('ext4', 'xfs') }}"
     __storage_min_size: "{{ volume_size }}"
     __storage_max_return: 1
   tags:
     - tests::lvm
 
   tasks:
+    - name: Set fs_after based on distribution and version
+      ansible.builtin.set_fact:
+        __storage_fs_after: "{{ (ansible_facts['distribution'] == 'RedHat' and
+                       ansible_facts['distribution_major_version'] == '6') |
+                      ternary('ext4', 'xfs') }}"
+
     - name: Prep storage role and discover unused disks
       ansible.builtin.include_tasks: tasks/setup.yml
 
@@ -41,7 +44,7 @@
             volumes:
               - name: test1
                 size: "{{ volume_size }}"
-                fs_type: "{{ fs_after }}"
+                fs_type: "{{ __storage_fs_after }}"
                 mount_point: "{{ mount_location }}"
 
     - name: Verify role results - 2
@@ -62,7 +65,7 @@
       assert:
         that:
           - not blivet_output.changed
-          - blivet_output.pools[0].volumes[0].fs_type == fs_after
+          - blivet_output.pools[0].volumes[0].fs_type == __storage_fs_after
         msg: Failed to preserve omitted fs_type on existing lvm volume
 
     - name: Verify role results - 3
@@ -77,7 +80,7 @@
             volumes:
               - name: test1
                 size: "{{ volume_size }}"
-                fs_type: "{{ fs_after }}"
+                fs_type: "{{ __storage_fs_after }}"
                 mount_point: "{{ mount_location }}"
 
     - name: Verify role results - 4
@@ -107,7 +110,7 @@
             volumes:
               - name: test1
                 size: "{{ volume_size }}"
-                fs_type: "{{ fs_after }}"
+                fs_type: "{{ __storage_fs_after }}"
                 mount_point: "{{ mount_location }}"
 
     - name: Verify role results - 6
